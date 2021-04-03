@@ -3,15 +3,18 @@ from splinter import Browser
 from bs4 import BeautifulSoup as soup
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
+import datetime as dt
 
 def scrape_all():
     # Initiate headless driver for deployment
     executable_path = {'executable_path': ChromeDriverManager().install()}
     browser = Browser('chrome', **executable_path, headless=True) #headless=True not observable on a browser during scraping
+    news_title, news_p = mars_news(browser)
+    
     # Run all scraping functions and store results in dictionary
     data = {
         "news_title": news_title,
-        "news_paragraph": news_paragraph,
+        "news_paragraph": news_p,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
         "last_modified": dt.datetime.now()
@@ -36,7 +39,7 @@ def mars_news(browser):
     # Optional delay for loading the page
     browser.is_element_present_by_css('div.list_text', wait_time=1)
 
-    #Convet the browser html to a soup object and then quit the
+    #Convet the browser html to a soup object and then quit the browser
     html = browser.html
     news_soup = soup(html, 'html.parser')
     # Add try/except for error handling
@@ -72,13 +75,12 @@ def featured_image(browser):
     try:
         # Find the relative image url
         img_url_rel = img_soup.find('img', class_='fancybox-image').get('src')
-    except AtributeError:
+    except AttributeError:
         return None
 
     # Use the base URL to create an absolute URL
     img_url = f'https://data-class-jpl-space.s3.amazonaws.com/JPL_Space/{img_url_rel}'
 
-    browser.quit()
     return img_url
 
     # ### Mars Facts
@@ -94,11 +96,11 @@ def mars_facts():
     # Assign columns and set index of dataframe
     df.columns=['description', 'Mars', 'Earth']
     df.set_index('description', inplace=True)
-   
-   # Convert dataframe into HTML format, add bootstrap
+    
     browser.quit()
+    #Convert dataframe into HTML format, add bootstrap
     return df.to_html()
 
-# Stop webdriver
-#browser.quit()
-
+if __name__ == "__main__":
+    # If running as script, print scraped data
+    print(scrape_all())
